@@ -3,6 +3,9 @@ import VueRouter from 'vue-router'
 
 import routes from './routes'
 
+import { auth } from '../services/firebase'
+import { onAuthStateChanged } from "firebase/auth";
+
 Vue.use(VueRouter)
 
 /*
@@ -24,6 +27,29 @@ export default function (/* { store, ssrContext } */) {
     // quasar.conf.js -> build -> publicPath
     mode: process.env.VUE_ROUTER_MODE,
     base: process.env.VUE_ROUTER_BASE
+  })
+
+  Router.beforeEach((to, from, next) => {  
+
+    console.log(from.path + " => " + to.path);
+    if(to.matched.some((record) => record.meta.requiresAuth)){
+      console.log('Require authentication');
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          // User is signed in, see docs for a list of available properties
+          // https://firebase.google.com/docs/reference/js/firebase.User
+          next();
+        } else {
+          next({
+            path: '/signin'
+          })
+        }
+      });
+    }
+    else {
+      next()
+    }
+    
   })
 
   return Router
