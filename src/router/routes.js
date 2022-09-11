@@ -16,7 +16,8 @@ const routes = [
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', component: () => import('src/pages/DogList.vue') }
+      { path: '', component: () => import('src/pages/DogList.vue') },
+      { path: 'post', component: () => import('src/pages/PostList.vue') }
     ]
   },
   // Always leave this as last one,
