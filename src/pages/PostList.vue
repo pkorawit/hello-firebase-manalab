@@ -15,7 +15,7 @@
     <q-dialog v-model="prompt" persistent>
       <q-card style="min-width: 350px">
         <q-card-section class="text-center">
-          <img :src="newPost.photoUrl" width="300px" @click="pickFile"/>
+          <img :src="newPost.photoUrl" width="300px" @click="pickFile" />
           <input
             type="file"
             id="postImage"
@@ -23,6 +23,7 @@
             accept="image/png, image/jpeg"
             hidden
             ref="postImage"
+            @change="uploadPhoto"
           />
         </q-card-section>
 
@@ -47,7 +48,7 @@
 
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat label="Add New Post" v-close-popup />
+          <q-btn flat label="Add New Post" @click="savePost" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -59,20 +60,13 @@
 
 <script>
 import { collection, getDocs } from "firebase/firestore";
-import { ref } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, addDoc } from "firebase/firestore";
 export default {
   name: "PageIndex",
 
   async mounted() {
-    const user = this.$auth.currentUser;
-    this.userName = user.email;
-
-    const querySnapshot = await getDocs(collection(this.$db, "posts"));
-    querySnapshot.forEach((doc) => {
-      // doc.data() is never undefined for query doc snapshots
-      console.log(doc.id, " => ", doc.data());
-      this.posts.push(doc.data());
-    });
+    this.getData()
   },
 
   data() {
@@ -92,14 +86,45 @@ export default {
       this.newPost.user = this.userName;
       this.prompt = true;
     },
-    pickFile(){
-        this.$refs.postImage.click();
+    pickFile() {
+      this.$refs.postImage.click();
     },
-    uploadPhoto(){
-        const fileName = `${Date.now()}.png`
-        const newFileRef = ref(this.$storage, fileName);
+    uploadPhoto() {
+      const fileName = `photos/${Date.now()}.png`;
+      const newFileRef = ref(this.$storage, fileName);
+      const fileData = this.$refs.postImage.files[0];
+      // 'file' comes from the Blob or File API
+      uploadBytes(newFileRef, fileData).then((snapshot) => {
+        console.log("Uploaded a blob or file!");
+        getDownloadURL(newFileRef).then((downloadURL) => {
+          console.log("File available at", downloadURL);
+          this.newPost.photoUrl = downloadURL;
+        });
+      });
+    },
+    async savePost() {
+      // Add a new document with a generated id.
+      const docRef = await addDoc(collection(this.$db, "posts"), this.newPost);
+      console.log("Document written with ID: ", docRef.id);
+      this.getData()
+      this.newPost = {
+        comment: "",
+        user: "",
+        photoUrl: "images/noimg.png",
+      }
+    },
+    async getData() {
+      this.posts = []  
+      const user = this.$auth.currentUser;
+      this.userName = user.email;
 
-    }
+      const querySnapshot = await getDocs(collection(this.$db, "posts"));
+      querySnapshot.forEach((doc) => {
+        // doc.data() is never undefined for query doc snapshots
+        console.log(doc.id, " => ", doc.data());
+        this.posts.push(doc.data());
+      });
+    },
   },
 };
 </script>
